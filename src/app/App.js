@@ -1,69 +1,179 @@
 import React from "react";
-import { newsCategory } from "../news";
+import News, { newsCategory } from "../news";
 import "./App.css";
 import Header from "../components/header";
 import NewsList from "../components/newsList";
 import Pagination from "../components/pagination";
 import Loading from "../components/loading";
-import axios from "axios";
 
+const news = new News(newsCategory.technology);
 class App extends React.Component {
   state = {
-    news: [],
-    category: newsCategory.technology,
+    data: {},
+    isLoading: true,
+  };
+
+  // constructor() {
+  //   super()
+  // }
+
+  componentDidMount() {
+    news
+      .getNews()
+      .then((data) => {
+        this.setState({ data, isLoading: false });
+      })
+      .catch((e) => {
+        console.log(e);
+        alert("Something went wrong");
+        this.setState({
+          isLoading: false,
+        });
+      });
+  }
+
+  next = () => {
+    if (this.state.data.isNext) {
+      this.setState({ isLoading: true });
+    }
+    news
+      .next()
+      .then((data) => {
+        this.setState({ data, isLoading: false });
+      })
+      .catch((e) => {
+        console.log(e);
+        alert("Something went wrong");
+        this.setState({
+          isLoading: false,
+        });
+      });
+  };
+  prev = () => {
+    if (this.state.data.isPrevious) {
+      this.setState({ isLoading: true });
+    }
+    news
+      .prev()
+      .then((data) => {
+        this.setState({ data, isLoading: false });
+      })
+      .catch((e) => {
+        console.log(e);
+        alert("Something went wrong");
+        this.setState({
+          isLoading: false,
+        });
+      });
+  };
+
+  handlePageChange = (value) => {
+    this.setState({
+      data: {
+        ...this.state.data,
+        currentPage: Number.parseInt(value),
+      },
+    });
+  };
+
+  goToPage = () => {
+    this.setState({
+      isLoading: true,
+    });
+    news
+      .setCurrentPage(this.state.data.currentPage)
+      .then((data) => {
+        this.setState({
+          data,
+          isLoading: false,
+        });
+      })
+      .catch((e) => {
+        console.log(e);
+        alert("Something went wrong");
+        this.setState({
+          isLoading: false,
+        });
+      });
   };
 
   changeCategory = (category) => {
-    this.setState({ category });
+    this.setState({
+      isLoading: true,
+    });
+    news
+      .changeCategory(category)
+      .then((data) => {
+        this.setState({ data, isLoading: false });
+      })
+      .catch((e) => {
+        console.log(e);
+        alert("Something went wrong");
+        this.setState({
+          isLoading: false,
+        });
+      });
   };
 
-  componentDidMount() {
-    const url = `${process.env.REACT_APP_NEWS_URL}?apiKey=${process.env.REACT_APP_NEWS_API_KEY}&category=${this.state.category}`;
-
-    axios
-      .get(url)
-      .then((response) => {
-        this.setState({
-          news: response.data.articles,
-        });
+  search = (searchTerm) => {
+    this.setState({
+      isLoading: true,
+    });
+    news
+      .search(searchTerm)
+      .then((data) => {
+        this.setState({ data, isLoading: false });
       })
-      .catch((e) => console.log(e));
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.category !== this.state.category) {
-      const url = `${process.env.REACT_APP_NEWS_URL}?apiKey=${process.env.REACT_APP_NEWS_API_KEY}&category=${this.state.category}`;
-
-      axios
-        .get(url)
-        .then((response) => {
-          this.setState({
-            news: response.data.articles,
-          });
-        })
-        .catch((e) => console.log(e));
-    }
-  }
+      .catch((e) => {
+        console.log(e);
+        alert("Something went wrong");
+        this.setState({
+          isLoading: false,
+        });
+      });
+  };
 
   render() {
+    const {
+      article,
+      isPrevious,
+      isNext,
+      category,
+      totalResults,
+      currentPage,
+      totalPage,
+    } = this.state.data;
     return (
       <div className="container">
         <div className="row">
           <div className="col-sm-6 offset-md-3">
-            <Header
-              category={this.state.category}
-              changeCategory={this.changeCategory}
-            />
+            <Header category={category} changeCategory={this.changeCategory} search={this.search} />
             <div className="d-flex">
-              <p className="text-black-50">About {0} results found</p>
+              <p className="text-black-50">
+                About {totalResults} results found
+              </p>
               <p className="text-black-50 ml-auto">
-                {1} page of {100}{" "}
+                {currentPage} page of {totalPage}{" "}
               </p>
             </div>
 
-            <NewsList news={this.state.news} />
-            <Loading />
-            <Pagination />
+            {this.state.isLoading ? (
+              <Loading />
+            ) : (
+              <div>
+                <NewsList news={article} />
+                <Pagination
+                  next={this.next}
+                  prev={this.prev}
+                  isPrevious={isPrevious}
+                  isNext={isNext}
+                  totalPage={totalPage}
+                  currentPage={currentPage}
+                  handlePageChange={this.handlePageChange}
+                  goToPage={this.goToPage}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
